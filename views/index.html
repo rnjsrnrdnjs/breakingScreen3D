@@ -28,27 +28,45 @@
 	<body>
 		{% block content %} {% endblock %}
 		<!-- 프레임 확인-->
+		<div id="play" style=" position:absolute;">
+			<label for="select" id="lbf" style="position:absolute;"></label>
+			<input type="file" id="select" style="display:none;"/>
+		</div>
+		
 		<div id="Stats-output"></div>
 
 		<!-- Div which will hold the Output -->
 		<div id="WebGL-output"></div>
-
+		
+		<div id="WebGL-output-play"></div>
+		
 		<!-- Javascript code that runs our Three.js examples -->
 		<script type="text/javascript">
-			const camera = new THREE.PerspectiveCamera(
+			let intro,play;
+			
+			let camera = new THREE.PerspectiveCamera(
 				45,
 				window.innerWidth / window.innerHeight,
 				0.1,
 				1000
 			);
-			const scene = new THREE.Scene();
-			const renderer = new THREE.WebGLRenderer();
+			let scene = new THREE.Scene();
+			let renderer = new THREE.WebGLRenderer();
+
+			let text1, text2, text3;
 
 			// once everything is loaded, we run our Three.js stuff.
 			function init() {
 				const stats = initStats();
-
-				renderer.setClearColor(new THREE.Color(0xeeeeee, 1.0));
+				camera = new THREE.PerspectiveCamera(
+				45,
+				window.innerWidth / window.innerHeight,
+				0.1,
+				1000
+			);
+				scene = new THREE.Scene();
+				renderer = new THREE.WebGLRenderer();
+				renderer.setClearColor(new THREE.Color(0x000000, 1.0));
 				renderer.setSize(window.innerWidth, window.innerHeight);
 				renderer.shadowMapEnabled = true;
 
@@ -57,7 +75,7 @@
 				// position and point the camera to the center of the scene
 				camera.position.x = -200;
 				camera.position.y = 200;
-				camera.position.z = 200;
+				camera.position.z = 250;
 				camera.lookAt(new THREE.Vector3(0, 0, 0));
 
 				const dirLight = new THREE.DirectionalLight();
@@ -73,8 +91,6 @@
 
 				// call the render function
 				let step = 0;
-
-				let text1, text2;
 
 				var controls = new (function () {
 					this.size = 30;
@@ -109,36 +125,80 @@
 							steps: controls.steps,
 						};
 
-						text1 = createMesh(new THREE.TextGeometry('breaking', options));
+						text1 = createMesh(new THREE.TextGeometry('breaking', options), 0x5ce75c);
 						text1.position.x = -50;
 						text1.position.y = 0;
 						text1.position.z = -40;
 
 						scene.add(text1);
-						text2 = createMesh(new THREE.TextGeometry('Screen-3D', options));
+						text2 = createMesh(new THREE.TextGeometry('Screen', options), 0x5ce75c);
 						text2.position.x = -50;
 						text2.position.y = -35;
 						text2.position.z = -35;
 
 						scene.add(text2);
+
+						text3 = createMesh(new THREE.TextGeometry('3D', options), 0xffeb46);
+						text3.position.x = 110;
+						text3.position.y = -35;
+						text3.position.z = -15;
+
+						scene.add(text3);
 					};
 				})();
 
 				controls.asGeom();
-				const gui = new dat.GUI();
+				//const gui = new dat.GUI();
 				/*
         gui.add(controls, 'rotationSpeed', 0, 0.5);
         gui.add(controls, 'bouncingSpeed', 0, 0.5);
 		*/
+					const starTexture = THREE.ImageUtils.loadTexture('/star.jpg');
+					const starTexture2= THREE.ImageUtils.loadTexture('/star2.jpg');
+				
+				function starBackGround(size, transparent, opacity, sizeAttenuation, color, texture,name) {
+					const geom = new THREE.Geometry();
+
+					const material = new THREE.ParticleBasicMaterial({
+						size: size,
+						transparent: transparent,
+						opacity: opacity,
+						map: texture,
+						blending: THREE.AdditiveBlending,
+						sizeAttenuation: sizeAttenuation,
+						color: color,
+					});
+
+					var range = 400;
+					for (var i = 0; i < 150; i++) {
+						var particle = new THREE.Vector3(
+							Math.random() * range - range / 2,
+							Math.random() * range * 1.5,
+							Math.random() * range - range / 2
+						);
+						particle.velocityY = 0.1 + Math.random() / 5;
+						particle.velocityX = (Math.random() - 0.5) / 3;
+						geom.vertices.push(particle);
+					}
+					
+
+					const system=new THREE.PointCloud(geom,material);
+					system.name=name;
+					system.sortParticles = true;
+					return system;
+				}
+				scene.add(starBackGround(20, true, 0.6, true,0xffffff,starTexture,"star"));
+				//scene.add(starBackGround(20, true, 0.6, true,0xffffff,starTexture2,"star2"));
+				
 
 				render();
-				function createMesh(geom) {
+				function createMesh(geom, inputColor) {
 					// assign two materials
 					//            var meshMaterial = new THREE.MeshLambertMaterial({color: 0xff5555});
 					//            var meshMaterial = new THREE.MeshNormalMaterial();
 					var meshMaterial = new THREE.MeshPhongMaterial({
 						specular: 0xffffff,
-						color: 0xeeffff,
+						color: inputColor,
 						shininess: 100,
 						metal: true,
 					});
@@ -151,27 +211,58 @@
 				function render() {
 					stats.update();
 					// rotate the cube around its axes
+					text3.rotation.y += 0.02;
+					
+					scene.children.forEach(function(child){
+						if(child instanceof THREE.PointCloud){
+							const vertices=child.geometry.vertices;
+												vertices.forEach(function(v){
+						v.y=v.y-(v.velocityY);
+						v.x=v.x-(v.velocityX);
+						
+						if(v.y<=0)v.y=60;
+						if(v.x<=-20 || v.x>=20)v.velocityX=v.velocityX*-1;
+					});
 
+						}
+					});
+					
+					
 					// render using requestAnimationFrame
-					requestAnimationFrame(render);
+					intro=requestAnimationFrame(render);
 					renderer.render(scene, camera);
 				}
-
+				
+				
+				const play=document.getElementById('lbf');
+				play.style.left=35+"vw";
+				play.style.top=70+"vh";
+				play.style.width=30+"vw";
+				play.style.height=30+"vw";
+				play.style.backgroundImage ="url(/play.svg)";
+				play.style.backgroundSize="cover";
+				
+				play.addEventListener('change',()=>{
+					
+				});
+				
 				function initStats() {
 					const stats = new Stats();
 
 					stats.setMode(0); // 0: fps, 1: ms
-
+				
 					// Align top-left
 					stats.domElement.style.position = 'absolute';
 					stats.domElement.style.left = '0px';
 					stats.domElement.style.top = '0px';
 
+					
 					document.getElementById('Stats-output').appendChild(stats.domElement);
 
 					return stats;
 				}
 			}
+			
 			function onResize() {
 				camera.aspect = window.innerWidth / window.innerHeight;
 				camera.updateProjectionMatrix();
@@ -182,6 +273,94 @@
 
 			// listen to the resize events
 			window.addEventListener('resize', onResize, false);
+			
+			const select=document.getElementById('select');
+			const canvas=document.createElement('canvas');
+			const ctx=canvas.getContext('2d');
+			canvas.width=window.innerWidth;
+			canvas.height=window.innerHeight;
+			
+			const selectImg=new Image();
+			select.addEventListener('change',(e)=>{
+				cancelAnimationFrame(intro);
+				let reader=new FileReader();
+				reader.onload=function(){
+					selectImg.src=reader.result;
+				}
+				selectImg.onload=()=>{
+					ctx.drawImage(selectImg,0,0,canvas.width,canvas.height);
+					//document.getElementById('WebGL-output-play').appendChild(canvas);
+					
+					
+					
+					document.getElementById("WebGL-output").style.display="none";
+					document.getElementById("Stats-output").style.display="none";
+					document.getElementById("play").style.display="none";
+					breakingScreen();
+					
+					
+				}
+				reader.readAsDataURL(select.files[0]);
+			},false);
+			const getRGB=[];
+			
+			function breakingScreen(){
+				
+				// 이미지 rgb 추출
+				const rgbImage=ctx.getImageData(0,0,canvas.width,canvas.height);
+				console.log(rgbImage.data.length);
+				let widthX=0;
+				let heightY=0;
+				
+				/* 캔번스 rgb 추출시 왼쪽에서 오른쪽
+				그후 아래로 탐색을 한다.*/
+				for(let i=0;i<rgbImage.data.length;i+=4){
+					/*
+					rgbImage.data[i]=255-rgbImage.data[i];//r
+					rgbImage.data[i+1]=255-rgbImage.data[i+1];//g
+					rgbImage.data[i+2]=255-rgbImage.data[i+2];//b
+					rgbImage.data[i+3]=255-rgbImage.data[i+3];//a
+					*/
+					getRGB.push({r:rgbImage.data[i],g:rgbImage.data[i+1],
+						b:rgbImage.data[i+2],a:rgbImage.data[i+3],
+								width:widthX,height:heightY});
+					widthX++;
+					if(widthX==window.innerWidth){
+						heightY++;				
+						widthX%=window.innerWidth;
+					}
+					
+				}
+				ctx.putImageData(rgbImage,0,0);
+			}
+			
+			function afterInit(){
+				scene=new THREE.Scene();
+				
+				camera=new THREE.PerspectiveCamera(45,window.innerWidth/window.innerHeight,0.1,1000);
+				
+				renderer=new THREE.WebGLRenderer();
+				
+				renderer.setClearColor(new THREE.Color(0xffffff,1.0));
+				renderer.setSize(window.innerWidth,window.innerHeight);
+				renderer.shadowMapEnabled=true;
+				
+				camera.position.x=0;
+				camera.position.y=300;//? 
+				camera.position.z=300;
+				camera.lookAt(new THREE.Vector3(0, 0, 0));
+				
+				document.getElementById('WebGL-output-play').appendChild(renderer.domElemnent);
+				
+				render2();
+				
+				function render2(){
+					
+					play=requestAnimationFrame(render);
+					renderer.render(scene,camera);
+				}
+			}
+			
 		</script>
 	</body>
 </html>
