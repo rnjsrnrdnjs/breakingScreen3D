@@ -8,7 +8,11 @@
 		<script type="text/javascript" src="/libs/three.js"></script>
 		<script type="text/javascript" src="/libs/stats.js"></script>
 		<script type="text/javascript" src="/libs/dat.gui.js"></script>
-
+		<script type="text/javascript" src="../libs/Projector.js"></script>
+		<script type="text/javascript" src="../libs/OrbitControls.js"></script>
+		 <script type="text/javascript" src="../libs/TrackballControls.js"></script>
+		
+		
 		<script type="text/javascript" src="/assets/fonts/helvetiker_regular.typeface.js"></script>
 		<script type="text/javascript" src="/assets/fonts/helvetiker_bold.typeface.js"></script>
 		<script
@@ -235,10 +239,18 @@
 				
 				
 				const play=document.getElementById('lbf');
-				play.style.left=35+"vw";
-				play.style.top=70+"vh";
-				play.style.width=30+"vw";
-				play.style.height=30+"vw";
+				if(window.innerWidth<window.innerHeight){
+					play.style.width=30+"vw";
+					play.style.height=30+"vw";
+					play.style.left=35+"vw";
+					play.style.top=70+"vh";
+				}
+				else{
+					play.style.width=20+"vh";
+					play.style.height=20+"vh";
+					play.style.left=45+"vw";
+					play.style.top=70+"vh";
+				}
 				play.style.backgroundImage ="url(/play.svg)";
 				play.style.backgroundSize="cover";
 				
@@ -331,7 +343,8 @@
 					}
 					
 				}
-				ctx.putImageData(rgbImage,0,0);
+				afterInit();
+				//ctx.putImageData(rgbImage,0,0);
 			}
 			
 			function afterInit(){
@@ -346,19 +359,78 @@
 				renderer.shadowMapEnabled=true;
 				
 				camera.position.x=0;
-				camera.position.y=300;//? 
-				camera.position.z=300;
+				camera.position.y=0;//? 
+				camera.position.z=750;
 				camera.lookAt(new THREE.Vector3(0, 0, 0));
 				
-				document.getElementById('WebGL-output-play').appendChild(renderer.domElemnent);
+				const clock = new THREE.Clock();
+				
+				const trackballControls = new THREE.TrackballControls(camera);
+
+        trackballControls.rotateSpeed = 1.0;
+        trackballControls.zoomSpeed = 1.0;
+        trackballControls.panSpeed = 1.0;
+//        trackballControls.noZoom=false;
+//        trackballControls.noPan=false;
+        trackballControls.staticMoving = true;
+//        trackballControls.dynamicDampingFactor=0.3;
+  				
+				
+				const group=new THREE.Object3D();
+				
+				const RGBgeometry=new THREE.BoxGeometry(1,1,1);
+				getRGB.forEach((item,idx)=>{
+					const RGBmaterial=new THREE.MeshBasicMaterial({color:new THREE.Color(`rgb(${getRGB[idx].r},${getRGB[idx].g},${getRGB[idx].b})`)});
+					const RGBbox=new THREE.Mesh(RGBgeometry,RGBmaterial);
+					RGBbox.castShadow=true;
+					
+					RGBbox.position.x=-window.innerWidth/2+getRGB[idx].width;
+					RGBbox.position.y=-window.innerHeight/2+getRGB[getRGB.length-1-idx].height;
+					RGBbox.position.z=1+Math.random()*5;
+					/*
+					RGBbox.position.x=-window.innerWidth/2+100;
+					RGBbox.position.y=window.innerHeight-100;
+					RGBbox.position.z=Math.random()*window.innerWidth;
+					*/
+					//scene.add(RGBbox);
+					group.add(RGBbox);	
+					
+					
+				});
+				scene.add(group);
+				
+				
+				
+				function createPixelBox(){
+					
+				}
+
+        // add the cube to the scene
+				
+				document.getElementById('WebGL-output-play').appendChild(renderer.domElement);
 				
 				render2();
 				
 				function render2(){
 					
-					play=requestAnimationFrame(render);
+					const delta = clock.getDelta();
+             		trackballControls.update(delta);
+					
+					/*
+					let idx=Math.floor(Math.random()*(getRGB.length-1));
+					let movez=Math.random()*window.innerWidth;
+					let movex=-100+Math.random()*200;
+					let movey=-100+Math.random()*200;
+					group.children[idx].position.x=movex;
+					group.children[idx].position.y=movey;
+					group.children[idx].position.z=movez;
+					*/
+					
+					play=requestAnimationFrame(render2);
 					renderer.render(scene,camera);
 				}
+				
+				
 			}
 			
 		</script>
